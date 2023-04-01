@@ -1,11 +1,14 @@
-apply plugin: "java"
+import fr.xpdustry.toxopid.spec.ModPlatform
+
+plugins {
+    id("java")
+    id("fr.xpdustry.toxopid") version "3.0.0"
+}
 
 version '1.0'
 
 targetCompatibility = 8
 sourceCompatibility = JavaVersion.VERSION_16
-
-sourceSets.main.java.srcDirs = ["src"]
 
 repositories{
     mavenCentral()
@@ -19,6 +22,12 @@ ext{
     sdkRoot = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
 }
 
+toxopid {
+    compileVersion.set("v142")
+    runtimeVersion.set("v142")
+    platforms.add(ModPlatform.DESKTOP)
+}
+
 //java 8 backwards compatibility flag
 allprojects{
     tasks.withType(JavaCompile){
@@ -28,7 +37,11 @@ allprojects{
 
 dependencies{
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
-    compileOnly "com.github.Anuken.MindustryJitpack:core:$mindustryVersion"
+    compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
+
+    implementation 'com.google.api-client:google-api-client:2.0.0'
+    implementation 'com.google.oauth-client:google-oauth-client-jetty:1.34.1'
+    implementation 'com.google.apis:google-api-services-drive:v3-rev20220815-2.0.0'
 
     annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
 }
@@ -62,6 +75,8 @@ task jarAndroid{
 }
 
 jar{
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     archiveFileName = "${project.archivesBaseName}Desktop.jar"
 
     from{
@@ -90,4 +105,8 @@ task deploy(type: Jar){
             delete "$buildDir/libs/${project.archivesBaseName}Android.jar"
         }
     }
+}
+
+tasks.runMindustryClient {
+    mods.setFrom(tasks.jar)
 }
