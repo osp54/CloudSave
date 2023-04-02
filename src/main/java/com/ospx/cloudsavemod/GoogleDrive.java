@@ -1,6 +1,8 @@
 package com.ospx.cloudsavemod;
 
+import arc.Core;
 import arc.files.Fi;
+import arc.func.Cons;
 import arc.util.Log;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -8,6 +10,8 @@ import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.media.MediaHttpDownloader;
+import com.google.api.client.googleapis.media.MediaHttpUploader;
 import com.google.api.client.http.FileContent;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -17,7 +21,6 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
-import mindustry.ui.fragments.LoadingFragment;
 
 import java.io.*;
 import java.security.GeneralSecurityException;
@@ -26,10 +29,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
+import static mindustry.Vars.enableDarkness;
 import static mindustry.Vars.ui;
 
+@SuppressWarnings("SimplifyStreamApiCallChains")
 public class GoogleDrive {
     /**
      * Application name.
@@ -48,12 +54,14 @@ public class GoogleDrive {
      * Global instance of the scopes required by this quickstart.
      * If modifying these scopes, delete your previously saved tokens/ folder.
      */
+
+    public static boolean connected = false;
+
     private static final List<String> SCOPES =
             Collections.singletonList(DriveScopes.DRIVE_APPDATA);
     private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
 
     public static Drive service;
-
     public static ExecutorService pool = Executors.newFixedThreadPool(2);
 
     public static void connect() {
@@ -64,17 +72,19 @@ public class GoogleDrive {
                 service = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
                         .setApplicationName(APPLICATION_NAME)
                         .build();
+
+                connected = true;
             } catch (GeneralSecurityException | IOException e) {
+                ui.loadfrag.hide();
                 ui.showException("An error occurred while connecting to Google Drive", e);
             }
         });
     }
 
-    public static void export(LoadingFragment frag) {
-        pool.submit(() -> {
+    public static Future<?> exportData() {
+        return pool.submit(() -> {
             try {
-                var file = new Fi("export_data.zip");
-
+                var file = Core.files.local("mindustry-data-export.zip");
                 ui.settings.exportData(file);
 
                 File fileMetadata = new File();
@@ -84,58 +94,66 @@ public class GoogleDrive {
                 FileContent mediaContent = new FileContent("application/zip", file.file());
 
                 Drive.Files.Create request = service.files().create(fileMetadata, mediaContent);
-                request.getMediaHttpUploader().setProgressListener(uploader -> {
+                request.getMediaHttpUploader().setDirectUploadEnabled(file.readBytes().length < 6_000_000).setProgressListener(uploader -> {
                     switch (uploader.getUploadState()) {
-                        case MEDIA_IN_PROGRESS -> frag.setProgress((float) uploader.getProgress());
-                        case MEDIA_COMPLETE -> frag.hide();
+                        case MEDIA_IN_PROGRESS -> ui.loadfrag.setProgress((float) uploader.getProgress());
+                        case MEDIA_COMPLETE -> ui.loadfrag.hide();
                     }
                 });
                 request.execute();
+
+                ui.showInfo("@data.exported");
             } catch (IOException e) {
-                frag.hide();
+                ui.loadfrag.hide();
                 ui.showException(e);
             }
         });
     }
 
-    public static void importData(LoadingFragment frag) {
-        pool.submit(() -> {
-            try {
-                FileList files = service.files().list()
-                        .setSpaces("appDataFolder")
-                        .setPageSize(10)
-                        .execute();
-                Log.info(files.toString());
-                var data = files.getFiles().stream()
-                        .filter(f -> f.getName().equals("data.zip"))
-                        .sorted(Comparator.comparing(f -> -f.getCreatedTime().getValue()))
-                        .collect(Collectors.toList());
+    public static Future<?> importData() {
+        return getDataFiles((data) -> {
+            Log.info(data.toString());
 
-                Log.info(data.toString());
-                if (!data.isEmpty()) {
-                    ByteArrayOutputStream content = new ByteArrayOutputStream();
-
-                    var request = service.files().get(data.get(0).getId());
-                    request.getMediaHttpDownloader().setProgressListener(downloader -> {
-                        switch (downloader.getDownloadState()) {
-                            case MEDIA_IN_PROGRESS -> frag.setProgress((float) downloader.getProgress());
-                            case MEDIA_COMPLETE -> frag.hide();
-                        }
-                    });
-                    request.executeMediaAndDownloadTo(content);
-
-                    try(OutputStream out = new FileOutputStream("data.zip")) {
-                        content.writeTo(out);
-                    }
-
-                    ui.settings.importData(new Fi("data.zip"));
-                } else {
-                    ui.showInfo("Empty");
-                }
-            } catch (IOException e) {
-                frag.hide();
-                ui.showException(e);
+            if (data.isEmpty()) {
+                ui.showInfo("Empty");
+                return;
             }
+
+            try {
+                var request = service.files().get(data.get(0).getId());
+                request.getMediaHttpDownloader().setDirectDownloadEnabled(data.get(0).size() < 6_000_000).setProgressListener(downloader -> {
+                    switch (downloader.getDownloadState()) {
+                        case MEDIA_IN_PROGRESS -> ui.loadfrag.setProgress((float) downloader.getProgress());
+                        case MEDIA_COMPLETE -> ui.loadfrag.hide();
+                    }
+                });
+                request.executeMediaAndDownloadTo(new FileOutputStream("data.zip"));
+
+                ui.settings.importData(new Fi("data.zip"));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    public static Future<?> getDataFiles(Cons<List<File>> callback) {
+        return pool.submit(() -> {
+            FileList files;
+            try {
+                files = service.files().list()
+                        .setSpaces("appDataFolder")
+                        .setQ("mimeType='application/zip'")
+                        .setFields("files(createdTime, name, id, size)")
+                        .execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            Log.info(files.toString());
+
+            callback.get(files.getFiles().stream()
+                    .filter(f -> f.getName().equals("data.zip"))
+                    .sorted(Comparator.comparing(f -> -f.getCreatedTime().getValue()))
+                    .collect(Collectors.toList()));
         });
     }
 
