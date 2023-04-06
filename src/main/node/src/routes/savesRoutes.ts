@@ -3,10 +3,13 @@ import express, { Router } from 'express';
 import { Types } from 'mongoose';
 import { CustomRequest, auth } from '../auth';
 import { UploadedFile } from 'express-fileupload';
+import crypto from 'crypto';
 import AdmZip from 'adm-zip'
-import { Environment } from '../main';
 import path from 'path';
 import fs from 'fs/promises';
+
+import { Environment } from '../main';
+import stream from 'stream';
 
 export const savesRoutes: Router = express.Router();
 
@@ -46,8 +49,9 @@ savesRoutes.post("/saves/upload", auth, async (req, res) => {
 
 		const id = new Types.ObjectId();
 		const filePath = getSaveFilePath(id.toString());
+		
 
-		await fs.writeFile(filePath, save.data);
+		await fs.writeFile(filePath, encryptBuffer(save.data, creq.notHashedPassword));
 
 		creq.user.saves.push({
 			_id: id,
@@ -70,7 +74,7 @@ savesRoutes.post("/saves/upload", auth, async (req, res) => {
 	}
 });
 
-savesRoutes.get("/saves/:id/download", auth, (req, res) => {
+savesRoutes.get("/saves/:id/download", auth, async (req, res) => {
 	const creq = req as CustomRequest;
 	const id = req.params.id;
 
@@ -81,7 +85,16 @@ savesRoutes.get("/saves/:id/download", auth, (req, res) => {
 	}
 
 	try {
-		res.download(getSaveFilePath(id));
+		const file = await fs.readFile(getSaveFilePath(id))
+
+		const decrypted = decryptBuffer(file, creq.notHashedPassword)
+		
+		res.setHeader("Content-Disposition", `attachment; filename=save.zip`);
+		res.setHeader("Content-Type", "application/zip");
+		
+		var readStream = new stream.PassThrough();
+		readStream.end(decrypted);
+		readStream.pipe(res);
 	} catch (err: any) {
 		console.log(err.stack)
 		res.status(500).send({
@@ -92,4 +105,24 @@ savesRoutes.get("/saves/:id/download", auth, (req, res) => {
 
 function getSaveFilePath(id: string): string {
 	return path.join(Environment.storageDirectory, id.toString());
+}
+
+function encryptBuffer(buffer: Buffer, password: string): Buffer {
+	const key = crypto.createHash('sha256').update(password).digest();
+	const iv = crypto.randomBytes(16);
+
+	const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+
+	return Buffer.concat([iv, cipher.update(buffer), cipher.final()]);
+}
+
+function decryptBuffer(buffer: Buffer, password: string): Buffer {
+	const iv = buffer.subarray(0, 16);
+	buffer = buffer.subarray(16);
+
+	const key = crypto.createHash('sha256').update(password).digest();
+
+	const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+
+	return Buffer.concat([decipher.update(buffer), decipher.final()]);
 }
