@@ -15,7 +15,7 @@ export async function auth(req: Request, res: Response, next: NextFunction) {
     const authorization = req.headers.authorization;
 
     if (!authorization || !authorization.startsWith('Basic ')) {
-        return res.header('WWW-Authenticate', 'Basic').send();
+        return res.status(401).header('WWW-Authenticate', 'Basic').send();
     }
 
     const [ email, password ] = Buffer.from(authorization.substring(5).trim(), "base64").toString().split(":");
