@@ -13,6 +13,9 @@ import static mindustry.Vars.dataDirectory;
 import static mindustry.Vars.ui;
 
 public class CloudSaveAPI {
+    private static final Gson gson = new Gson();
+    public static Fi credentialsFile = dataDirectory.child("cloudsave_credentials");
+    public static String credentials;
     private static final OkHttpClient client = new OkHttpClient.Builder()
             .addInterceptor(new Interceptor() {
                 @NotNull
@@ -21,18 +24,14 @@ public class CloudSaveAPI {
                     if (credentials == null) return chain.proceed(chain.request());
                     Request request = chain.request().newBuilder()
                             .header("Authorization", "Basic " + credentials)
-                        .build();
+                            .build();
                     return chain.proceed(request);
                 }
             }).build();
-
-    public static Fi credentialsFile = dataDirectory.child("cloudsave_credentials");
-    public static String credentials;
-
     public static String apiServerURL = "http://localhost:3000";
 
     public static void init() {
-        if (credentialsFile.exists()) { // todo хранить пароль и имейл в Core.settings
+        if (credentialsFile.exists()) {
             credentials = credentialsFile.readString();
         }
     }

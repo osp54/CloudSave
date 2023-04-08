@@ -11,6 +11,11 @@ public class RegisterHandler implements Handler {
     private final String email;
     private final String password;
 
+    public RegisterHandler(String email, String password) {
+        this.email = email;
+        this.password = password;
+    }
+
     @Override
     public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
         if (response.isSuccessful()) {
@@ -19,10 +24,5 @@ public class RegisterHandler implements Handler {
         } else {
             // todo show error
         }
-    }
-
-    public RegisterHandler(String email, String password) {
-        this.email = email;
-        this.password = password;
     }
 }

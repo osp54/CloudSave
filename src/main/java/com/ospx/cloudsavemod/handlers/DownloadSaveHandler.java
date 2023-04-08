@@ -8,7 +8,7 @@ import okio.BufferedSink;
 import okio.Okio;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
+import java.io.IOException;
 
 import static mindustry.Vars.ui;
 

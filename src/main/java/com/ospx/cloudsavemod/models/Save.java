@@ -8,5 +8,6 @@ public class Save {
     public LocalDateTime date;
 
     @SuppressWarnings("unused")
-    public Save() {}
+    public Save() {
+    }
 }

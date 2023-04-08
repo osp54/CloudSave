@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response } from 'express';
+import {NextFunction, Request, Response} from 'express';
 import bcrypt from 'bcrypt';
-import { IUser, User } from './models/userModel';
-import { Types, Document } from 'mongoose';
+import {IUser, User} from './models/userModel';
+import {Document, Types} from 'mongoose';
 
 export interface CustomRequest extends Request {
     user: Document<unknown, {}, IUser> & Omit<IUser & Required<{
@@ -18,13 +18,13 @@ export async function auth(req: Request, res: Response, next: NextFunction) {
         return res.status(401).header('WWW-Authenticate', 'Basic').send();
     }
 
-    const [ email, password ] = Buffer.from(authorization.substring(5).trim(), "base64").toString().split(":");
+    const [email, password] = Buffer.from(authorization.substring(5).trim(), "base64").toString().split(":");
 
     if (!email || !password) {
         return invalidCredentials(res);
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({email});
 
     if (!user) {
         return invalidCredentials(res);
@@ -34,11 +34,11 @@ export async function auth(req: Request, res: Response, next: NextFunction) {
         password,
         user.password
     );
-    
+
     if (!passwordIsValid) {
         return invalidCredentials(res);
     }
-    
+
     creq.user = user;
     creq.notHashedPassword = password;
     next();

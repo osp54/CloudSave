@@ -1,4 +1,4 @@
-import { Schema, Types, ValidatorProps, model } from "mongoose"
+import {model, Schema, Types, ValidatorProps} from "mongoose"
 import isEmail from "validator/lib/isEmail";
 
 export interface ISave {
@@ -26,11 +26,12 @@ export const User = model("User", new Schema<IUser>({
         }
     },
     password: {
-        type: String, 
+        type: String,
         required: [true, 'Password is required'],
         validate: {
-            validator: (value: string) => value.length > 7},
-            message: () => 'Password must be at least seven characters long'
+            validator: (value: string) => value.length > 7
+        },
+        message: () => 'Password must be at least seven characters long'
     },
     saves: [{
         file: String,

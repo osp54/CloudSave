@@ -1,128 +1,128 @@
-import express, { Router } from 'express';
+import express, {Router} from 'express';
 
-import { Types } from 'mongoose';
-import { CustomRequest, auth } from '../auth';
-import { UploadedFile } from 'express-fileupload';
+import {Types} from 'mongoose';
+import {auth, CustomRequest} from '../auth';
+import {UploadedFile} from 'express-fileupload';
 import crypto from 'crypto';
 import AdmZip from 'adm-zip'
 import path from 'path';
 import fs from 'fs/promises';
 
-import { Environment } from '../main';
+import {Environment} from '../main';
 import stream from 'stream';
 
 export const savesRoutes: Router = express.Router();
 
 savesRoutes.get("/saves/list", auth, async (req, res) => {
-   const creq = req as CustomRequest;
-   
-   res.status(200).json({
-      saves: creq.user.saves.map((s) => {
-		return {id: s.id, createdAt: s.createdAt}
-	  })
-   });
+    const creq = req as CustomRequest;
+
+    res.status(200).json({
+        saves: creq.user.saves.map((s) => {
+            return {id: s.id, createdAt: s.createdAt}
+        })
+    });
 });
 
 savesRoutes.post("/saves/upload", auth, async (req, res) => {
-	const creq = req as CustomRequest;
+    const creq = req as CustomRequest;
 
-	if(!req.files || !req.files.save) {
-		return res.status(400).send({
-			message: 'Missing file'
-		});
-	}
+    if (!req.files || !req.files.save) {
+        return res.status(400).send({
+            message: 'Missing file'
+        });
+    }
 
-	const save = req.files!.save as UploadedFile;
-	if (save.mimetype !== "application/zip") {
-		return res.status(400).send({
-			message: 'File mimetype must be application/zip'
-		});
-	}
+    const save = req.files!.save as UploadedFile;
+    if (save.mimetype !== "application/zip") {
+        return res.status(400).send({
+            message: 'File mimetype must be application/zip'
+        });
+    }
 
-	try {
-		const zip = new AdmZip(save.data);
-		if (!zip || !zip.getEntry("settings.bin")) {
-			return res.status(400).send({
-				message: 'Invalid save file'
-			});
-		}
+    try {
+        const zip = new AdmZip(save.data);
+        if (!zip || !zip.getEntry("settings.bin")) {
+            return res.status(400).send({
+                message: 'Invalid save file'
+            });
+        }
 
-		const id = new Types.ObjectId();
-		const filePath = getSaveFilePath(id.toString());
-		
+        const id = new Types.ObjectId();
+        const filePath = getSaveFilePath(id.toString());
 
-		await fs.writeFile(filePath, encryptBuffer(save.data, creq.notHashedPassword));
 
-		creq.user.saves.push({
-			_id: id,
-			file: filePath,
-			createdAt: Date.now()
-		});
+        await fs.writeFile(filePath, encryptBuffer(save.data, creq.notHashedPassword));
 
-		await creq.user.save();
-		
-		res.status(200).send({
-			message: "Success",
-			save: creq.user.saves.at(-1)
-		});
+        creq.user.saves.push({
+            _id: id,
+            file: filePath,
+            createdAt: Date.now()
+        });
 
-	} catch (err: any) {
-		console.error(err.stack)
-		return res.status(500).send({
-			message: err.message
-		});
-	}
+        await creq.user.save();
+
+        res.status(200).send({
+            message: "Success",
+            save: creq.user.saves.at(-1)
+        });
+
+    } catch (err: any) {
+        console.error(err.stack)
+        return res.status(500).send({
+            message: err.message
+        });
+    }
 });
 
 savesRoutes.get("/saves/:id/download", auth, async (req, res) => {
-	const creq = req as CustomRequest;
-	const id = req.params.id;
+    const creq = req as CustomRequest;
+    const id = req.params.id;
 
-	if (!creq.user.saves.some(s => s.id === id)) {
-		res.status(403).send({
-			message: "It is not your save"
-		})
-	}
+    if (!creq.user.saves.some(s => s.id === id)) {
+        res.status(403).send({
+            message: "It is not your save"
+        })
+    }
 
-	try {
-		const file = await fs.readFile(getSaveFilePath(id))
+    try {
+        const file = await fs.readFile(getSaveFilePath(id))
 
-		const decrypted = decryptBuffer(file, creq.notHashedPassword)
-		
-		res.setHeader("Content-Disposition", `attachment; filename=save.zip`);
-		res.setHeader("Content-Type", "application/zip");
-		
-		var readStream = new stream.PassThrough();
-		readStream.end(decrypted);
-		readStream.pipe(res);
-	} catch (err: any) {
-		console.log(err.stack)
-		res.status(500).send({
-			message: err.message
-		});
-	}
+        const decrypted = decryptBuffer(file, creq.notHashedPassword)
+
+        res.setHeader("Content-Disposition", `attachment; filename=save.zip`);
+        res.setHeader("Content-Type", "application/zip");
+
+        var readStream = new stream.PassThrough();
+        readStream.end(decrypted);
+        readStream.pipe(res);
+    } catch (err: any) {
+        console.log(err.stack)
+        res.status(500).send({
+            message: err.message
+        });
+    }
 });
 
 function getSaveFilePath(id: string): string {
-	return path.join(Environment.storageDirectory, id.toString());
+    return path.join(Environment.storageDirectory, id.toString());
 }
 
 function encryptBuffer(buffer: Buffer, password: string): Buffer {
-	const key = crypto.createHash('sha256').update(password).digest();
-	const iv = crypto.randomBytes(16);
+    const key = crypto.createHash('sha256').update(password).digest();
+    const iv = crypto.randomBytes(16);
 
-	const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
 
-	return Buffer.concat([iv, cipher.update(buffer), cipher.final()]);
+    return Buffer.concat([iv, cipher.update(buffer), cipher.final()]);
 }
 
 function decryptBuffer(buffer: Buffer, password: string): Buffer {
-	const iv = buffer.subarray(0, 16);
-	buffer = buffer.subarray(16);
+    const iv = buffer.subarray(0, 16);
+    buffer = buffer.subarray(16);
 
-	const key = crypto.createHash('sha256').update(password).digest();
+    const key = crypto.createHash('sha256').update(password).digest();
 
-	const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
 
-	return Buffer.concat([decipher.update(buffer), decipher.final()]);
+    return Buffer.concat([decipher.update(buffer), decipher.final()]);
 }
