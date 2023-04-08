@@ -24,7 +24,7 @@ public class CSMenu extends CSBaseDialog {
         // Dialogs
         var savesDialog = new CSSaves("Saves");
         var loginDialog = new CSActions.CSLogin("Login");
-        var registerDialog = new CSActions.CSLogin("Register");
+        var registerDialog = new CSActions.CSRegister("Register");
         var logoutDialog = new CSActions.CSLogout("Logout");
 
         // Buttons
