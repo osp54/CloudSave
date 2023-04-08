@@ -25,7 +25,6 @@ public class CloudSaveAPI {
                     return chain.proceed(request);
                 }
             }).build();
-    private static final Gson gson = new Gson();
 
     public static Fi credentialsFile = dataDirectory.child("cloudsave_credentials");
     public static String credentials;
@@ -33,7 +32,7 @@ public class CloudSaveAPI {
     public static String apiServerURL = "http://localhost:3000";
 
     public static void init() {
-        if (credentialsFile.exists()) {
+        if (credentialsFile.exists()) { // todo хранить пароль и имейл в Core.settings
             credentials = credentialsFile.readString();
         }
     }
