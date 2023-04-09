@@ -15,9 +15,14 @@ import static mindustry.Vars.ui;
 public class DownloadSaveHandler implements Handler {
     @Override
     public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-        if (!response.isSuccessful() || response.body() == null) {
+        if (!response.isSuccessful()) {
             System.out.println(response);
             return; // todo show error
+        }
+
+        if (response.body() == null) {
+            ui.showErrorMessage("The server returned nothing.");
+            return;
         }
 
         Fi dest = Core.files.local("save.zip");

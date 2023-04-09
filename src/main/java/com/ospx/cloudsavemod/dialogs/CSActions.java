@@ -1,6 +1,8 @@
 package com.ospx.cloudsavemod.dialogs;
 
 import arc.scene.ui.layout.Table;
+import com.ospx.cloudsavemod.CloudSaveAPI;
+import com.ospx.cloudsavemod.handlers.RegisterHandler;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
 
@@ -21,7 +23,8 @@ public class CSActions {
 
             actions.field("Email", text -> this.email = text).margin(margin).row();
             actions.field("Password", text -> this.password = text).margin(margin).row();
-            actions.button("Confirm", Icon.add, iconMed, () -> ui.showInfo(this.email + "\n" + this.password)).padTop(margin).row();
+            actions.button("Confirm", Icon.add, iconMed, () ->
+                    CloudSaveAPI.registerAccount(email, password, new RegisterHandler(email, password))).padTop(margin).row();
 
             cont.top();
             cont.margin(14f);
