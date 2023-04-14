@@ -5,13 +5,12 @@
 </h1>
 
 <div align="center">
-  Mindustry mod
+  Mindustry mod that saves your saves in cloud
   <br />
   <br />
 </div>
 
-<div align="center">
-<br />
+
 
 
 ## Building for Desktop Testing
