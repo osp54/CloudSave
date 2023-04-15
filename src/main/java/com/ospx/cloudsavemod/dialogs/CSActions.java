@@ -7,14 +7,13 @@ import mindustry.gen.Icon;
 import mindustry.gen.Tex;
 
 import static mindustry.Vars.iconMed;
-import static mindustry.Vars.ui;
 
 public class CSActions {
-    public static class CSRegister extends CSBaseDialog {
+    public static class CSManage extends CSBaseDialog {
         String email;
         String password;
 
-        public CSRegister(String title) {
+        public CSManage(String title) {
             super(title);
 
             var actions = new Table(Tex.button);
@@ -23,8 +22,11 @@ public class CSActions {
 
             actions.field("Email", text -> this.email = text).margin(margin).row();
             actions.field("Password", text -> this.password = text).margin(margin).row();
-            actions.button("Confirm", Icon.add, iconMed, () ->
+
+            actions.button("Register", Icon.add, iconMed, () ->
                     CloudSaveAPI.registerAccount(email, password, new RegisterHandler(email, password))).padTop(margin).row();
+
+            actions.button("Login", Icon.players, iconMed, () -> { /*  */ }).padTop(margin).row();
 
             cont.top();
             cont.margin(14f);
@@ -35,18 +37,6 @@ public class CSActions {
             pane(cont).grow().top();
             row();
             add(buttons).fillX();
-        }
-    }
-
-    public static class CSLogin extends CSBaseDialog {
-        public CSLogin(String title) {
-            super(title);
-        }
-    }
-
-    public static class CSLogout extends CSBaseDialog {
-        public CSLogout(String title) {
-            super(title);
         }
     }
 }

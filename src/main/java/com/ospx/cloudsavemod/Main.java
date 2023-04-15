@@ -13,14 +13,15 @@ import static mindustry.Vars.ui;
 
 public class Main extends Mod {
     public static final Gson gson = new Gson();
+
+    public static void saveCredentials(String email, String password) {
+        Core.settings.put("cs_credentials", Base64Coder.encodeString(email + ":" + password));
+    }
+
     @Override
     public void init() {
         Time.mark();
         ui.menufrag.addButton("Cloud Save", Icon.save, () -> new CSMenu().show());
         Log.infoTag("CloudSave", "Mod has loaded in " + Time.elapsed());
-    }
-
-    public static void saveCredentials(String email, String password) {
-        Core.settings.put("cs_credentials", Base64Coder.encodeString(email + ":" + password));
     }
 }

@@ -2,6 +2,7 @@ package com.ospx.cloudsavemod.dialogs;
 
 import arc.Core;
 import arc.scene.ui.layout.Table;
+import mindustry.Vars;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
 import mindustry.ui.Styles;
@@ -23,17 +24,17 @@ public class CSMenu extends CSBaseDialog {
 
         // Dialogs
         var savesDialog = new CSSaves("Saves");
-        var loginDialog = new CSActions.CSLogin("Login");
-        var registerDialog = new CSActions.CSRegister("Register");
-        var logoutDialog = new CSActions.CSLogout("Logout");
+        var manageAccount = new CSActions.CSManage("Manage account");
 
         // Buttons
-        if (!Core.settings.getBool("cloud-save-logged")) {
-            menu.button("Login", Icon.players, style, size, loginDialog::show).marginLeft(margin).row();
-            menu.button("Register", Icon.add, style, size, registerDialog::show).marginLeft(margin).row();
+        if (Core.settings.getString("cs_credentials") == null || Core.settings.getString("cs_credentials").isEmpty()) {
+            menu.button("Manage account", Icon.players, style, size, manageAccount::show).marginLeft(margin).row();
         } else {
             menu.button("Manage saves", Icon.save, style, size, savesDialog::show).marginLeft(margin).row();
-            menu.button("Logout", Icon.exit, style, size, logoutDialog::show).marginLeft(margin).row();
+            menu.button("Logout", Icon.exit, style, size, () -> Vars.ui.showConfirm("Do you really want to sign out?", () -> {
+                Core.settings.remove("cs_credentials");
+                Vars.ui.showInfo("You have been signed out successfully");
+            })).marginLeft(margin).row();
         }
 
         cont.top();
