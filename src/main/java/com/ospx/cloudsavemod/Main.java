@@ -13,6 +13,7 @@ import static mindustry.Vars.ui;
 
 public class Main extends Mod {
     public static final Gson gson = new Gson();
+    public static final boolean debug = true; // For testing purposes only, please disable, whatever it broke the game
 
     public static void saveCredentials(String email, String password) {
         Core.settings.put("cs_credentials", Base64Coder.encodeString(email + ":" + password));

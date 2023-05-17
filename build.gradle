@@ -23,8 +23,8 @@ ext {
 }
 
 toxopid {
-    compileVersion.set("v142")
-    runtimeVersion.set("v142")
+    compileVersion.set(mindustryVersion)
+    runtimeVersion.set(mindustryVersion)
     platforms.add(ModPlatform.DESKTOP)
 }
 
