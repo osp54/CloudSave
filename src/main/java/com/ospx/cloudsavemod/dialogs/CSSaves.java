@@ -34,7 +34,7 @@ public class CSSaves extends CSBaseDialog {
             for (Save save : saves) {
                 uwu.button(t -> {
                     t.top().left();
-                    t.margin(12f);
+                    t.margin(24f);
 
                     String details = "ID: " + save._id + " Time created: " + save.date.toString();
                     t.label(() -> details);
@@ -42,15 +42,15 @@ public class CSSaves extends CSBaseDialog {
 
                     t.table(right -> {
                         right.right();
-                        right.button(Icon.save, () -> {
+
+                        right.button(Icon.saveSmall, () -> {
                             // Сохраняем
                             Call.announce("Save (id: " + save._id + ") has been successfully stored");
-                        }).size(50f);
-                        right.button(Icon.trash, () -> {
-                            ui.showConfirm("@confirm", "Are you sure you want to delete a save?", () -> {
-                                // Удаляем
-                            });
-                        }).size(50f);
+                        }).size(40f).pad(5f).row();
+
+                        right.button(Icon.trashSmall, () -> ui.showConfirm("@confirm", "Are you sure you want to delete a save?", () -> {
+                            // Удаляем
+                        })).size(40f).pad(5f).row();
                     }).growX().right().padRight(-8f).padTop(-8f);
                 }, Styles.flatBordert, () -> {
                 });
