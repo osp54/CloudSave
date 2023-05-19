@@ -18,44 +18,39 @@ public class CSSaves extends CSBaseDialog {
 
     public CSSaves(String savesTitle) {
         super(savesTitle);
-
         cont.clear();
 
+        Seq<Save> saves = Seq.with();
         Stack stack = new Stack();
         ScrollPane scrollPane = new ScrollPane(stack);
-
-        scrollPane.setFadeScrollBars(false);
         scrollPane.update(() -> locationY = scrollPane.getScrollY());
 
-        Seq<Save> saves = getTestSavesList();
-
         if (!saves.isEmpty()) {
-            Table uwu = new Table();
+            Table table = new Table();
             for (Save save : saves) {
-                uwu.button(t -> {
+                table.button(t -> {
                     t.top().left();
-                    t.margin(24f);
-
-                    String details = "ID: " + save._id + " Time created: " + save.date.toString();
-                    t.label(() -> details);
+                    t.margin(12);
                     t.defaults().left().top();
+
+                    t.table(title -> {
+                        title.left();
+                        title.table(text -> {
+                            text.add("[accent]" + save._id + "\n" + "[lightgray]" + save.date).wrap().top().width(300f).growX().left();
+                            text.row();
+                        }).top().growX();
+                        title.add().growX();
+                    }).growX().growY().left();
 
                     t.table(right -> {
                         right.right();
-
-                        right.button(Icon.saveSmall, () -> {
-                            // Сохраняем
-                            Call.announce("Save (id: " + save._id + ") has been successfully stored");
-                        }).size(40f).pad(5f).row();
-
+                        right.button(Icon.saveSmall, () -> Call.announce("Save (id: " + save._id + ") has been successfully stored")).size(50f).pad(5f);
                         right.button(Icon.trashSmall, () -> ui.showConfirm("@confirm", "Are you sure you want to delete a save?", () -> {
-                            // Удаляем
-                        })).size(40f).pad(5f).row();
+                        })).size(50f).pad(5f);
                     }).growX().right().padRight(-8f).padTop(-8f);
-                }, Styles.flatBordert, () -> {
-                });
+                }, Styles.flatBordert, () -> new CSSaveDialog("Save", save._id, save.date).show()).row();
 
-                stack.add(uwu);
+                stack.add(table);
             }
         } else {
             cont.table(Styles.black6, t -> t.add("No saves found")).height(80f);
@@ -67,12 +62,6 @@ public class CSSaves extends CSBaseDialog {
         setFillParent(true);
         title.setAlignment(Align.center);
         titleTable.row();
-    }
-
-    public static Seq<Save> getTestSavesList() {
-        var list = new Seq<Save>();
-        for (int i = 0; i < 50; i++) list.add(new Save(false));
-        return list;
     }
 
     @Override
