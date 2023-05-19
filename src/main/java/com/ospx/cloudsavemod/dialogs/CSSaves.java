@@ -20,7 +20,7 @@ public class CSSaves extends CSBaseDialog {
         super(savesTitle);
         cont.clear();
 
-        Seq<Save> saves = Seq.with();
+        Seq<Save> saves = Seq.with(new Save(false));
         Stack stack = new Stack();
         ScrollPane scrollPane = new ScrollPane(stack);
         scrollPane.update(() -> locationY = scrollPane.getScrollY());
@@ -44,11 +44,10 @@ public class CSSaves extends CSBaseDialog {
 
                     t.table(right -> {
                         right.right();
-                        right.button(Icon.saveSmall, () -> Call.announce("Save (id: " + save._id + ") has been successfully stored")).size(50f).pad(5f);
-                        right.button(Icon.trashSmall, () -> ui.showConfirm("@confirm", "Are you sure you want to delete a save?", () -> {
-                        })).size(50f).pad(5f);
+                        right.button(Icon.save, () -> CSSaves.loadSave(save)).size(50f).pad(5f);
+                        right.button(Icon.trash, () -> CSSaves.deleteSave(save)).size(50f).pad(5f);
                     }).growX().right().padRight(-8f).padTop(-8f);
-                }, Styles.flatBordert, () -> new CSSaveDialog("Save", save._id, save.date).show()).row();
+                }, Styles.flatBordert, () -> new CSSaveDialog("Save", save).show()).row();
 
                 stack.add(table);
             }
@@ -62,6 +61,20 @@ public class CSSaves extends CSBaseDialog {
         setFillParent(true);
         title.setAlignment(Align.center);
         titleTable.row();
+    }
+
+    public static void loadSave(Save save) {
+        ui.showConfirm("@confirm", "Are you sure you want to delete a save?", () -> {
+            // Store save
+            Call.announce("Save (id: " + save._id + ") has been successfully stored");
+        });
+    }
+
+    public static void deleteSave(Save save) {
+        ui.showConfirm("@confirm", "Are you sure you want to delete a save?", () -> {
+            // Remove save
+            Call.announce("Save (id: " + save._id + ") has been successfully deleted");
+        });
     }
 
     @Override
