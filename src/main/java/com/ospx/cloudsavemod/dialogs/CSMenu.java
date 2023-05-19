@@ -14,37 +14,35 @@ public class CSMenu extends CSBaseDialog {
     public CSMenu() {
         super("Cloud Save");
 
-        // Menu from game settings
         var menu = new Table(Tex.button);
-
-        // Styles
-        TextButtonStyle style = Styles.flatt;
-        float margin = 8f, size = iconMed;
         menu.defaults().size(400f, 60f);
 
-        // Dialogs
         var savesDialog = new CSSaves("Saves");
         var manageAccount = new CSActions.CSManage("Manage account");
 
-        // Buttons
-        if (Core.settings.getString("cs_credentials") == null || Core.settings.getString("cs_credentials").isEmpty()) {
+        TextButtonStyle style = Styles.flatt;
+        float margin = 8f, size = iconMed;
+
+        String credentials = Core.settings.getString("cs_credentials");
+        if (credentials == null || credentials.isEmpty()) {
             menu.button("Manage account", Icon.players, style, size, manageAccount::show).marginLeft(margin).row();
         } else {
             menu.button("Manage saves", Icon.save, style, size, savesDialog::show).marginLeft(margin).row();
-            menu.button("Logout", Icon.exit, style, size, () -> Vars.ui.showConfirm("Do you really want to sign out?", () -> {
-                Core.settings.remove("cs_credentials");
-                Vars.ui.showInfo("You have been signed out successfully");
-            })).marginLeft(margin).row();
+            menu.button("Logout", Icon.exit, style, size, this::confirmLogout).marginLeft(margin).row();
         }
 
-        cont.top();
-        cont.margin(14f);
-        cont.clearChildren();
+        cont.top().margin(14f).clearChildren();
         cont.add(menu);
-
         row();
         pane(cont).grow().top();
         row();
         add(buttons).fillX();
+    }
+
+    private void confirmLogout() {
+        Vars.ui.showConfirm("Do you really want to sign out?", () -> {
+            Core.settings.remove("cs_credentials");
+            Vars.ui.showInfo("You have been signed out successfully");
+        });
     }
 }

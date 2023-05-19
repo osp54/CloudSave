@@ -13,43 +13,48 @@ import static mindustry.Vars.ui;
 
 public class CSActions {
     public static class CSManage extends CSBaseDialog {
-        String email;
-        String password;
+        private String email;
+        private String password;
 
         public CSManage(String title) {
             super(title);
 
-            // Styles
             var actions = new Table(Tex.button);
+
             float margin = 8f;
             actions.defaults().size(400f, 60f);
 
-            // Buttons
-            actions.field("Email", text -> this.email = text).margin(margin).row();
-            actions.field("Password", text -> this.password = text).margin(margin).row();
+            actions.field("Email", this::setEmail).margin(margin).row();
+            actions.field("Password", this::setPassword).margin(margin).row();
 
-            actions.button("Register", Icon.add, iconMed, () ->
-                    CloudSaveAPI.registerAccount(email, password, new RegisterHandler(email, password))).padTop(margin).row();
+            actions.button("Register", Icon.add, iconMed, this::registerAccount).padTop(margin).row();
+            actions.button("Login", Icon.players, iconMed, this::login).padTop(margin).row();
 
-            actions.button("Login", Icon.players, iconMed, () -> {
-                if (Main.debug) {
-                    Core.settings.put("cs_credentials", "testing");
-                    ui.showInfo("Debug mode enabled");
-                } else {
-                    // Do something
-                }
-            }).padTop(margin).row();
-
-            // Styles
-            cont.top();
-            cont.margin(14f);
-            cont.clearChildren();
+            cont.top().margin(14f).clearChildren();
             cont.add(actions);
-
             row();
             pane(cont).grow().top();
             row();
             add(buttons).fillX();
+        }
+
+        private void setEmail(String email) {
+            this.email = email;
+        }
+
+        private void setPassword(String password) {
+            this.password = password;
+        }
+
+        private void registerAccount() {
+            CloudSaveAPI.registerAccount(email, password, new RegisterHandler(email, password));
+        }
+
+        private void login() {
+            if (Main.debug) {
+                Core.settings.put("cs_credentials", "testing");
+                ui.showInfo("Debug mode enabled");
+            }
         }
     }
 }
