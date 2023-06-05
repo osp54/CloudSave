@@ -1,110 +1,106 @@
-import express, {Router} from 'express';
-
-import {Types} from 'mongoose';
-import {auth, CustomRequest} from '../auth';
-import {UploadedFile} from 'express-fileupload';
+import express, { Router } from 'express';
+import { Types } from 'mongoose';
+import { auth, CustomRequest } from '../auth';
+import { UploadedFile } from 'express-fileupload';
 import crypto from 'crypto';
-import AdmZip from 'adm-zip'
-import path from 'path';
+import AdmZip from 'adm-zip';
 import fs from 'fs/promises';
-
-import {Environment} from '../main';
-import stream from 'stream';
+import { Environment } from '../main';
+import path from "path";
+import stream from "stream";
 
 export const savesRoutes: Router = express.Router();
 
-savesRoutes.get("/saves/list", auth, async (req, res) => {
-    const creq = req as CustomRequest;
+savesRoutes.get('/saves/list', auth, async (req, res) => {
+    const { user } = req as CustomRequest;
 
     res.status(200).json({
-        saves: creq.user.saves.map((s) => {
-            return {id: s.id, createdAt: s.createdAt}
-        })
+        saves: user.saves,
     });
 });
 
-savesRoutes.post("/saves/upload", auth, async (req, res) => {
-    const creq = req as CustomRequest;
+savesRoutes.post('/saves/upload', auth, async (req, res) => {
+    const { user, notHashedPassword, files } = req as CustomRequest;
 
-    if (!req.files || !req.files.save) {
+    if (!files || !files.save) {
         return res.status(400).send({
-            message: 'Missing file'
+            message: 'Missing file',
         });
     }
 
-    const save = req.files!.save as UploadedFile;
-    if (save.mimetype !== "application/zip") {
+    const save = files.save as UploadedFile;
+    if (save.mimetype !== 'application/zip') {
         return res.status(400).send({
-            message: 'File mimetype must be application/zip'
+            message: 'File mimetype must be application/zip',
         });
     }
 
     try {
         const zip = new AdmZip(save.data);
-        if (!zip || !zip.getEntry("settings.bin")) {
+        if (!zip || !zip.getEntry('settings.bin')) {
             return res.status(400).send({
-                message: 'Invalid save file'
+                message: 'Invalid save file',
             });
         }
 
         const id = new Types.ObjectId();
         const filePath = getSaveFilePath(id.toString());
 
+        await fs.writeFile(
+            filePath,
+            encryptBuffer(save.data, notHashedPassword)
+        );
 
-        await fs.writeFile(filePath, encryptBuffer(save.data, creq.notHashedPassword));
-
-        creq.user.saves.push({
+        user.saves.push({
             _id: id,
-            file: filePath,
-            createdAt: Date.now()
+            createdAt: Date.now(),
         });
 
-        await creq.user.save();
+        await user.save();
 
         res.status(200).send({
-            message: "Success",
-            save: creq.user.saves.at(-1)
+            message: 'Success',
+            save: user.saves.at(-1),
         });
-
     } catch (err: any) {
-        console.error(err.stack)
+        console.error(err.stack);
         return res.status(500).send({
-            message: err.message
+            message: err.message,
         });
     }
 });
 
-savesRoutes.get("/saves/:id/download", auth, async (req, res) => {
-    const creq = req as CustomRequest;
-    const id = req.params.id;
+savesRoutes.get('/saves/:id/download', auth, async (req, res) => {
+    const { user, notHashedPassword, params } = req as CustomRequest;
+    const { id } = params;
 
-    if (!creq.user.saves.some(s => s.id === id)) {
+    if (!user.saves.some((s) => s.id === id)) {
         res.status(403).send({
-            message: "It is not your save"
-        })
+            message: 'Save not found',
+        });
     }
 
     try {
-        const file = await fs.readFile(getSaveFilePath(id))
+        const file = await fs.readFile(getSaveFilePath(id));
 
-        const decrypted = decryptBuffer(file, creq.notHashedPassword)
+        const decrypted = decryptBuffer(file, notHashedPassword);
 
-        res.setHeader("Content-Disposition", `attachment; filename=save.zip`);
-        res.setHeader("Content-Type", "application/zip");
+        res.setHeader('Content-Disposition', 'attachment; filename=save.zip');
+        res.setHeader('Content-Type', 'application/zip');
 
-        var readStream = new stream.PassThrough();
+        const readStream = new stream.PassThrough();
         readStream.end(decrypted);
         readStream.pipe(res);
     } catch (err: any) {
-        console.log(err.stack)
+        console.log(err.stack);
         res.status(500).send({
-            message: err.message
+            message: err.message,
         });
     }
 });
 
 function getSaveFilePath(id: string): string {
-    return path.join(Environment.storageDirectory, id.toString());
+    return path.resolve(Environment.storageDirectory, id.toString());
 }
 
 function encryptBuffer(buffer: Buffer, password: string): Buffer {

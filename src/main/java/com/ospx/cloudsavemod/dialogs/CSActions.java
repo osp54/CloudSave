@@ -1,13 +1,15 @@
 package com.ospx.cloudsavemod.dialogs;
 
-import arc.Core;
 import arc.scene.ui.layout.Table;
-import com.ospx.cloudsavemod.CloudSaveAPI;
 import com.ospx.cloudsavemod.Main;
-import com.ospx.cloudsavemod.handlers.RegisterHandler;
+import com.ospx.cloudsavemod.Utils;
 import mindustry.gen.Icon;
 import mindustry.gen.Tex;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
+import static com.ospx.cloudsavemod.Main.restClient;
 import static mindustry.Vars.iconMed;
 import static mindustry.Vars.ui;
 
@@ -47,14 +49,19 @@ public class CSActions {
         }
 
         private void registerAccount() {
-            CloudSaveAPI.registerAccount(email, password, new RegisterHandler(email, password));
+            try {
+                var response = restClient.register(email, password);
+
+                if (Utils.showErrorStatus(response)) return;
+
+                restClient.updateCredentials(Main.saveCredentials(email, password));
+            } catch (ExecutionException | InterruptedException | TimeoutException e) {
+                ui.showException("An error occurred while registration", e);
+            }
         }
 
         private void login() {
-            if (Main.debug) {
-                Core.settings.put("cs_credentials", "testing");
-                ui.showInfo("Debug mode enabled");
-            }
+            restClient.updateCredentials(Main.saveCredentials(email, password));
         }
     }
 }

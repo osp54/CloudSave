@@ -4,7 +4,9 @@ import arc.graphics.Color;
 import com.ospx.cloudsavemod.models.Save;
 import mindustry.gen.Icon;
 
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 
 public class CSSaveDialog extends CSBaseDialog {
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss dd.MM.yyyy");
@@ -23,7 +25,7 @@ public class CSSaveDialog extends CSBaseDialog {
 
             description.add("[lightgray] Save date:").color(Color.gray).padTop(0);
             description.row();
-            description.add(save.date.format(formatter)).growX().wrap().padTop(5);
+            description.add(formatter.format(Instant.ofEpochMilli(save.date.getTime()))).growX().wrap().padTop(5);
             description.row();
 
             row();

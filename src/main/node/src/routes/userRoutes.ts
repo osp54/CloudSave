@@ -18,7 +18,7 @@ userRoutes.post('/register', async (req, res) => {
 
         let user = new User({
             email,
-            password: bcrypt.hashSync(password, 8)
+            password: await bcrypt.hash(password, 8)
         });
 
         await user.save();

@@ -3,7 +3,6 @@ import isEmail from "validator/lib/isEmail";
 
 export interface ISave {
     _id: Types.ObjectId;
-    file: string;
     createdAt: Date;
 }
 
@@ -34,7 +33,6 @@ export const User = model("User", new Schema<IUser>({
         message: () => 'Password must be at least seven characters long'
     },
     saves: [{
-        file: String,
         createdAt: Date
     }]
 }));

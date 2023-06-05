@@ -8,6 +8,7 @@ import mindustry.gen.Tex;
 import mindustry.ui.Styles;
 
 import static arc.scene.ui.TextButton.TextButtonStyle;
+import static com.ospx.cloudsavemod.Main.restClient;
 import static mindustry.Vars.iconMed;
 
 public class CSMenu extends CSBaseDialog {
@@ -42,6 +43,7 @@ public class CSMenu extends CSBaseDialog {
     private void confirmLogout() {
         Vars.ui.showConfirm("Do you really want to sign out?", () -> {
             Core.settings.remove("cs_credentials");
+            restClient.updateCredentials(null);
             Vars.ui.showInfo("You have been signed out successfully");
         });
     }
