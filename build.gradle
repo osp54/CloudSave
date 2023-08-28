@@ -13,11 +13,11 @@ sourceCompatibility = JavaVersion.VERSION_16
 repositories {
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
+    maven { url "https://raw.githubusercontent.com/Zelaux/MindustryRepo/master/repository" }
 }
-
 ext {
     // The build number that this mod is made for
-    mindustryVersion = 'v144.1'
+    mindustryVersion = 'v145.1'
     jabelVersion = "93fde537c7"
     sdkRoot = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
 }
@@ -36,8 +36,8 @@ allprojects {
 }
 
 dependencies {
+    compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
-    compileOnly "com.github.Anuken.MindustryJitpack:core:$mindustryVersion"
 
     implementation "com.google.code.gson:gson:2.10.1"
     implementation "org.eclipse.jetty:jetty-client:12.0.0.beta0"
