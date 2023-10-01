@@ -1,73 +1,54 @@
 package com.ospx.cloudsavemod;
 
 import arc.Core;
-import arc.util.serialization.Base64Coder;
-import org.eclipse.jetty.client.*;
-import org.eclipse.jetty.http.HttpFields;
-import org.eclipse.jetty.http.HttpHeader;
-import org.eclipse.jetty.http.HttpMethod;
-import org.eclipse.jetty.http.MultiPart;
-import org.eclipse.jetty.util.Fields;
+import com.github.kevinsawicki.http.HttpRequest;
+import com.ospx.cloudsavemod.models.Saves;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+
+import static com.ospx.cloudsavemod.Main.gson;
 
 public class RestClient {
     public static String API_SERVER_URL = "http://localhost:3000";
 
-    private final HttpClient http = new HttpClient();
-
     public String credentials;
 
 
-    public RestClient(String credentials) throws Exception {
+    public RestClient(String credentials) {
         this.credentials = credentials;
-
-        http.getProtocolHandlers().remove(WWWAuthenticationProtocolHandler.NAME);
-        http.start();
     }
 
-    public ContentResponse register(String email, String password) throws ExecutionException, InterruptedException, TimeoutException {
-        Fields fields = new Fields();
-
-        fields.add("email", email);
-        fields.add("password", password);
-
-        return http.POST(API_SERVER_URL + "/register")
-                .body(new FormRequestContent(fields))
-                .send();
+    public int register(String email, String password) throws ExecutionException, InterruptedException, TimeoutException {
+        return HttpRequest.post(API_SERVER_URL + "/register")
+                .form("email", email)
+                .form("password", password)
+                .code();
     }
 
-    public ContentResponse getSavesList() throws ExecutionException, InterruptedException, TimeoutException {
-        return http.newRequest(API_SERVER_URL + "/saves/list")
-                .method(HttpMethod.GET)
-                .headers(this::addAuthHeader)
-                .send();
+    public Saves getSavesList() {
+        String json  = HttpRequest.get(API_SERVER_URL + "/saves/list")
+                .authorization(generateBasicAuth())
+                .body();
+
+        if (json == null) return null;
+
+        return gson.fromJson(json, Saves.class);
     }
 
-    public ContentResponse uploadSave(Path path) throws ExecutionException, InterruptedException, TimeoutException, IOException {
-        MultiPartRequestContent multiPart = new MultiPartRequestContent();
-        multiPart.addPart(new MultiPart.PathPart("save", "save.zip", HttpFields.EMPTY, path));
-        multiPart.close();
-
-        return http.POST(API_SERVER_URL + "/saves/upload/")
-                .body(multiPart)
-                .headers(this::addAuthHeader)
-                .send();
+    public int uploadSave(File file) {
+        return HttpRequest.post(API_SERVER_URL + "/saves/upload")
+                .authorization(generateBasicAuth())
+                .part("save", file)
+                .code();
     }
 
-    public ContentResponse downloadSave(String id) throws ExecutionException, InterruptedException, TimeoutException {
-        return http.newRequest(API_SERVER_URL + "/saves/" + id + "/download")
-                .method(HttpMethod.GET)
-                .headers(this::addAuthHeader)
-                .send();
-    }
-
-    private void addAuthHeader(HttpFields.Mutable h) {
-        h.add("Authorization", generateBasicAuth());
+    public int downloadSave(String id) {
+        return HttpRequest.get(API_SERVER_URL + "/saves/" + id + "/download")
+                .authorization(generateBasicAuth())
+                .receive(Core.files.local("save.zip").file())
+                .code();
     }
 
     private String generateBasicAuth() {

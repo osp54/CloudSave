@@ -9,6 +9,7 @@ import arc.scene.ui.layout.Table;
 import arc.struct.Seq;
 import arc.util.Align;
 import arc.util.Log;
+import com.ospx.cloudsavemod.RestClient;
 import com.ospx.cloudsavemod.Utils;
 import com.ospx.cloudsavemod.models.Save;
 import com.ospx.cloudsavemod.models.Saves;
@@ -28,32 +29,28 @@ import static mindustry.Vars.ui;
 
 public class CSSaves extends CSBaseDialog {
     protected float locationY;
-    protected Seq<Save> saves;
 
     public CSSaves(String savesTitle) {
         super(savesTitle);
         cont.clear();
         shown(() -> {
-            Seq<Save> saves;
-            try {
-                var response = restClient.getSavesList();
-                if (Utils.showErrorStatus(response)) return;
+            Saves saves = restClient.getSavesList();
 
-                Log.info(response.getContentAsString());
-                saves = Seq.with(gson.fromJson(response.getContentAsString(), Saves.class).saves);
-            } catch (ExecutionException | InterruptedException | TimeoutException e) {
-                ui.showException("An error occurred while loading saves list", e);
+            if (saves == null) {
+                hide();
+                ui.showErrorMessage("Unable to load saves list. Check your internet connection.");
                 return;
             }
+            Seq<Save> savesSeq = Seq.with(saves.saves);
 
             Stack stack = new Stack();
             ScrollPane scrollPane = new ScrollPane(stack);
             scrollPane.update(() -> locationY = scrollPane.getScrollY());
 
-            if (!saves.isEmpty()) {
+            if (!savesSeq.isEmpty()) {
                 Table table = new Table();
 
-                for (Save save : saves) {
+                for (Save save : savesSeq) {
                     table.button(t -> {
                         t.top().left();
                         t.margin(12);
@@ -92,18 +89,13 @@ public class CSSaves extends CSBaseDialog {
 
     public static void loadSave(Save save) {
         ui.showConfirm("@confirm", "Are you sure you want to load a save?", () -> {
-            try {
-                var response = restClient.downloadSave(save._id);
-                if (Utils.showErrorStatus(response)) return;
+            var status = restClient.downloadSave(save._id);
+            if (Utils.showErrorStatus(status)) return;
 
-                Fi dest = Core.files.local("save.zip");
-                dest.writeBytes(response.getContent());
+            Fi dest = Core.files.local("save.zip");
 
-                ui.settings.importData(dest);
-                ui.showInfoOnHidden("You need to restart in order for the changes to take effect", app::exit);
-            } catch (ExecutionException | InterruptedException | TimeoutException e) {
-                ui.showException("An error occurred while loading save", e);
-            }
+            ui.settings.importData(dest);
+            ui.showInfoOnHidden("You need to restart in order for the changes to take effect", app::exit);
         });
     }
 

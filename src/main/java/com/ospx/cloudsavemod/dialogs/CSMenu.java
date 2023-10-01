@@ -45,6 +45,7 @@ public class CSMenu extends CSBaseDialog {
             Core.settings.remove("cs_credentials");
             restClient.updateCredentials(null);
             Vars.ui.showInfo("You have been signed out successfully");
+            hide();
         });
     }
 }

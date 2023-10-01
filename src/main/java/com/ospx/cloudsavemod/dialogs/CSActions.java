@@ -55,6 +55,7 @@ public class CSActions {
                 if (Utils.showErrorStatus(response)) return;
 
                 restClient.updateCredentials(Main.saveCredentials(email, password));
+                hide();
             } catch (ExecutionException | InterruptedException | TimeoutException e) {
                 ui.showException("An error occurred while registration", e);
             }
@@ -62,6 +63,7 @@ public class CSActions {
 
         private void login() {
             restClient.updateCredentials(Main.saveCredentials(email, password));
+            hide();
         }
     }
 }
